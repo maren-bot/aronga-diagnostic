@@ -21,9 +21,11 @@ ${score_summary}`
 
   const aiData = await aiResponse.json();
 
+  console.log("CLAUDE RESPONSE:", aiData);
+
   emailBody =
-    aiData?.content?.[0]?.text
-    || "Thanks for completing the diagnostic. We’ll be in touch shortly.";
+    aiData?.content?.[0]?.text ||
+    "Thanks for completing the diagnostic. We’ll be in touch shortly.";
 
 } catch (err) {
   console.log("Claude failed, using fallback:", err);
