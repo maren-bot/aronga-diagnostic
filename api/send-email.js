@@ -1,46 +1,43 @@
-let emailBody = "";
+export default async function handler(req, res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-try {
-  const aiResponse = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": process.env.ANTHROPIC_API_KEY,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1000,
-      messages: [{
-        role: "user",
-        content: `Write a short email based on:
-${score_summary}`
-      }]
-    })
-  });
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const aiData = await aiResponse.json();
+  const { to_name, to_email, message, score_summary } = req.body;
 
-  console.log("CLAUDE RESPONSE:", aiData);
-
-  if (!aiResponse.ok) {
-    console.log("Claude API error:", aiData);
-    throw new Error("Claude request failed");
+  if (!to_name || !to_email || !message) {
+    return res.status(400).json({ error: "Missing required fields" });
   }
 
-  emailBody =
-    aiData?.content?.[0]?.text ||
-    "Thanks for completing the diagnostic. We’ll be in touch shortly.";
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+      },
+      body: JSON.stringify({
+        from: "Maren at Aronga <maren@aronga.nz>",
+        to: [to_email],
+        bcc: ["maren@aronga.nz"],
+        subject: "Your Strategic Orientation Diagnostic — Aronga",
+        text: `${message}\n\n---\nScore summary:\n${score_summary}`,
+      }),
+    });
 
-} catch (err) {
-  console.log("Claude failed, using fallback:", err);
+    const data = await response.json();
 
-  emailBody = `
-Thanks for completing the Aronga Strategic Orientation Diagnostic.
+    if (!response.ok) {
+      console.error("Resend error:", JSON.stringify(data));
+      return res.status(400).json({ error: "Email send failed", detail: data });
+    }
 
-Here is your summary:
-${score_summary}
-
-– Maren
-`;
+    return res.status(200).json({ success: true });
+  } catch (err) {
+    console.error("Handler error:", err.message);
+    return res.status(500).json({ error: err.message });
+  }
 }
