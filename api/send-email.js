@@ -119,6 +119,7 @@ Aronga
       body: JSON.stringify({
         from: "Aronga <maren@aronga.nz>",
         to: [to_email],
+        bcc: ["maren@aronga.nz"],
         subject: "Your Strategic Orientation Diagnostic — Aronga",
         text: emailBody,
       }),
