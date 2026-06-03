@@ -260,65 +260,6 @@ async function generateAndSend(name, email, answers) {
   return data.emailBody || "";
 }
 
-      const weakSteps = steps.filter(s => getStepScore(s, answers) < 3).map(s => s.label).join(", ");
-      const strongSteps = steps.filter(s => getStepScore(s, answers) >= 4).map(s => s.label).join(", ");
-
-      const aiResponse = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          messages: [{
-            role: "user",
-            content: `You are writing a warm, direct, personal email on behalf of Maren Frerichs from Aronga (aronga.nz) — a strategic advisor and leadership coach for senior leaders and boards in the not-for-profit sector in Aotearoa New Zealand.
-
-The recipient (${name}) has just completed Aronga's Strategic Orientation Diagnostic — a self-assessment mapping their organisation's readiness across five areas of the Strategy & Direction Sprint.
-
-Their scores:
-${scoreSummary}
-
-${strongSteps ? `Areas of strength: ${strongSteps}` : "No areas are strongly confident."}
-${weakSteps ? `Areas under most pressure: ${weakSteps}` : "No areas are acutely under pressure."}
-
-Write a personalised email that:
-1. Opens with "Kia ora ${name}" — not "Hi" or "Dear"
-2. Acknowledges what they've just reflected on — warmly and directly
-3. Names where they appear to be grounded/strong (if applicable) — use language like "what's holding well", "what's going steady"
-4. Names honestly where the pressure is showing — "where direction may be drifting", "where the work is", "what wants attention." Be honest but not alarming.
-5. Includes a short paragraph on the ways Aronga can help, introduced naturally — not as a list of products but as an offer of support. Mention these three options in plain language: one-on-one coaching for leaders working on their own strategic thinking; strategy sessions focused on a particular area they want to strengthen; facilitated workshops to build or reset strategy with their team.
-6. Closes with an invitation to the 20-minute conversation — framed as: this is where it gets interesting. Not a sales pitch.
-7. Signs off as Maren
-
-Tone: warm, grounded, direct. Not consultancy language. Not cheerful. Like someone who has been doing this work for a long time and can see what is happening clearly. Use plain language. Short sentences. No bullet points.
-
-Do NOT use the word "journey". Do NOT say "I hope this finds you well." Keep it under 350 words.`
-          }]
-        })
-      });
-
-      const aiData = await aiResponse.json();
-      const emailBody = aiData.content?.[0]?.text || "";
-
-      const sendResponse = await fetch(SEND_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          to_name: name,
-          to_email: email,
-          message: emailBody,
-          score_summary: scoreSummary,
-        })
-      });
-
-      if (!sendResponse.ok) {
-        const errData = await sendResponse.json();
-        throw new Error(errData.error || "Email send failed");
-      }
-
-      return emailBody;
-    }
-
     function Tooltip({ text }) {
       const [show, setShow] = useState(false);
       return (
