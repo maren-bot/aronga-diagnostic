@@ -1,14 +1,18 @@
 export default async function handler(req, res) {
   console.log("🔥 FUNCTION HIT");
 
+  // =========================
   // CORS
+  // =========================
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "POST")
+
+  if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
+  }
 
   const { to_name, to_email, score_summary } = req.body;
 
@@ -19,7 +23,7 @@ export default async function handler(req, res) {
   let emailBody = "";
 
   // =========================
-  // 1. CLAUDE GENERATION
+  // 1. CLAUDE (INTERPRETATION LAYER)
   // =========================
   try {
     const aiResponse = await fetch("https://api.anthropic.com/v1/messages", {
@@ -32,33 +36,67 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: "claude-3-5-sonnet-latest",
         max_tokens: 900,
+        temperature: 0.7,
         messages: [
           {
             role: "user",
             content: `
-You are Maren Frerichs writing a strategic reflection email.
+You are Maren Frerichs from Aronga (Aotearoa New Zealand).
+
+You interpret leadership diagnostics through a framework called Strategic Orientation in Motion:
+- Leadership is about staying oriented in shifting conditions, not reporting on fixed plans
+- The purpose is insight, not summarisation
+- You must interpret patterns across identity, purpose, choices, capability, and rhythm
+
+DO NOT repeat scores mechanically.
+DO NOT present this as a report.
+
+You are writing a strategic reflection email.
 
 Recipient: ${to_name}
 
 Scores:
 ${score_summary}
 
-Write:
-- Kia ora ${to_name} opening
-- pattern insight (not summary)
-- strengths (2–3)
-- pressure points (2–3)
-- meaning under leadership pressure
-- mention coaching / strategy sessions / workshops naturally
-- invite 20-minute clarity conversation
+WRITE AN EMAIL THAT:
 
-STYLE:
-- warm, grounded, direct
-- no corporate tone
-- no clichés
-- no "journey"
-- no "hope you're well"
-- under 350 words
+1. Opens with: "Kia ora ${to_name}"
+
+2. First paragraph:
+Describe the *overall pattern* of how this leader is operating under pressure (not a summary of categories)
+
+3. Second paragraph:
+Name 2–3 strengths using natural language like:
+- “this is holding steady”
+- “this is working well under load”
+- “there is strong grounding here”
+
+4. Third paragraph:
+Name 2–3 pressure points using calm language:
+- “strain is showing here”
+- “attention is needed here”
+- “there are early signs of drift”
+
+5. Fourth paragraph:
+Interpret what this means for decision-making under uncertainty and leadership clarity
+
+6. Fifth paragraph:
+Naturally weave in Aronga support:
+(coaching, strategy sessions, workshops)
+Do NOT list them. Integrate them as options that might be useful.
+
+7. Final paragraph:
+Invite a 20-minute conversation framed as clarity under pressure
+
+STYLE RULES:
+- Warm, grounded, direct
+- No corporate language
+- No clichés
+- No motivational tone
+- No “journey”
+- No “hope you’re well”
+- Short paragraphs
+- Under 350 words
 
 END EXACTLY WITH:
 
@@ -80,15 +118,19 @@ https://wa.me/64274469032
 
     const aiData = await aiResponse.json();
 
-    console.log("ANTHROPIC RESPONSE:", JSON.stringify(aiData, null, 2));
+    console.log("ANTHROPIC RAW RESPONSE:", JSON.stringify(aiData, null, 2));
 
     emailBody = aiData?.content?.[0]?.text || "";
 
-    if (!emailBody) throw new Error("Empty AI response");
+    if (!emailBody || emailBody.length < 50) {
+      throw new Error("Invalid or empty AI response");
+    }
+
   } catch (err) {
     console.error("AI GENERATION FAILED:", err);
 
-    emailBody = `Kia ora ${to_name},
+    emailBody = `
+Kia ora ${to_name},
 
 Thanks for completing the Strategic Orientation Diagnostic.
 
@@ -97,12 +139,15 @@ ${score_summary}
 
 Ngā mihi  
 Maren Frerichs  
-Aronga`;
+Aronga
+    `.trim();
   }
 
   // =========================
-  // 2. SEND EMAIL TO CLIENT
+  // 2. SEND EMAIL (CLIENT)
   // =========================
+  let resendClientResult;
+
   try {
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -118,16 +163,25 @@ Aronga`;
       }),
     });
 
-    const data = await response.json();
+    resendClientResult = await response.json();
 
     if (!response.ok) {
-      console.error("Resend error:", data);
-      return res.status(400).json({ error: "Email send failed", detail: data });
+      console.error("Resend client error:", resendClientResult);
+      return res.status(400).json({
+        error: "Client email failed",
+        detail: resendClientResult,
+      });
     }
 
-    // =========================
-    // 3. INTERNAL COPY (ALWAYS)
-    // =========================
+  } catch (err) {
+    console.error("CLIENT EMAIL ERROR:", err);
+    return res.status(500).json({ error: err.message });
+  }
+
+  // =========================
+  // 3. INTERNAL COPY (ALWAYS SENT)
+  // =========================
+  try {
     await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -137,7 +191,7 @@ Aronga`;
       body: JSON.stringify({
         from: "Aronga <maren@aronga.nz>",
         to: ["maren@aronga.nz"],
-        subject: `Diagnostic: ${to_name} (${to_email})`,
+        subject: `Diagnostic Submission — ${to_name}`,
         text: `
 NEW DIAGNOSTIC SUBMISSION
 
@@ -151,15 +205,14 @@ ${emailBody}
       }),
     });
 
-    return res.status(200).json({
-      success: true,
-      emailBody,
-    });
   } catch (err) {
-    console.error("SEND ERROR:", err);
-
-    return res.status(500).json({
-      error: err.message,
-    });
+    console.error("INTERNAL COPY FAILED:", err);
+    // do NOT fail main request if internal copy fails
   }
+
+  return res.status(200).json({
+    success: true,
+    emailBody,
+    resend: resendClientResult,
+  });
 }
