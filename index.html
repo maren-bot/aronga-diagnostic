@@ -231,15 +231,34 @@
       return { label: "Under pressure", color: "#a0826d" };
     }
 
-    async function generateAndSend(name, email, answers) {
-      const scoreSummary = steps.map(step => {
-        const score = getStepScore(step, answers);
-        const parts = step.parts.map(part => {
-          const ps = getPartScore(part, answers);
-          return `    ${part.label}: ${ps.toFixed(1)}/5`;
-        }).join("\n");
-        return `${step.label} (${step.subtitle}): ${score.toFixed(1)}/5\n${parts}`;
-      }).join("\n\n");
+async function generateAndSend(name, email, answers) {
+  const scoreSummary = steps.map(step => {
+    const score = getStepScore(step, answers);
+    const parts = step.parts.map(part => {
+      const ps = getPartScore(part, answers);
+      return `    ${part.label}: ${ps.toFixed(1)}/5`;
+    }).join("\n");
+    return `${step.label} (${step.subtitle}): ${score.toFixed(1)}/5\n${parts}`;
+  }).join("\n\n");
+
+  const response = await fetch(SEND_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      to_name: name,
+      to_email: email,
+      score_summary: scoreSummary,
+    })
+  });
+
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error || "Send failed");
+  }
+
+  const data = await response.json();
+  return data.emailBody || "";
+}
 
       const weakSteps = steps.filter(s => getStepScore(s, answers) < 3).map(s => s.label).join(", ");
       const strongSteps = steps.filter(s => getStepScore(s, answers) >= 4).map(s => s.label).join(", ");
