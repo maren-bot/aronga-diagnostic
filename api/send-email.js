@@ -1,5 +1,6 @@
 export default async function handler(req, res) {
   console.log("🔥 FUNCTION HIT");
+
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -13,8 +14,11 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
-  // Step 1: Generate email body via Anthropic
+  // =========================
+  // 1. GENERATE EMAIL (CLAUDE)
+  // =========================
   let emailBody = "";
+
   try {
     const aiResponse = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -25,40 +29,88 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
-        max_tokens: 1000,
-        messages: [{
-          role: "user",
-          content: `You are writing a warm, direct, personal email on behalf of Maren Frerichs from Aronga (aronga.nz) — a strategic advisor and leadership coach for senior leaders and boards in the not-for-profit sector in Aotearoa New Zealand.
+        max_tokens: 900,
+        messages: [
+          {
+            role: "user",
+            content: `
+You are Maren Frerichs writing a strategic reflection email for a senior leader in Aotearoa New Zealand.
 
-The recipient (${to_name}) has just completed Aronga's Strategic Orientation Diagnostic — a self-assessment mapping their organisation's readiness across five areas of the Strategy & Direction Sprint.
+They have just completed the Aronga Strategic Orientation Diagnostic.
 
 Their scores:
 ${score_summary}
 
-Write a personalised email that:
-1. Opens with "Kia ora ${to_name}" — not "Hi" or "Dear"
-2. Acknowledges what they've just reflected on — warmly and directly
-3. Names where they appear to be grounded/strong (if applicable) — use language like "what's holding well", "what's going steady"
-4. Names honestly where the pressure is showing — "where direction may be drifting", "where the work is", "what wants attention." Be honest but not alarming.
-5. Includes a short paragraph on the ways Aronga can help, introduced naturally — not as a list of products but as an offer of support. Mention these three options in plain language: one-on-one coaching for leaders working on their own strategic thinking; strategy sessions focused on a particular area they want to strengthen; facilitated workshops to build or reset strategy with their team.
-6. Closes with an invitation to a 20-minute conversation — framed as: this is where it gets interesting. Not a sales pitch.
-7. Signs off as Maren
+Write a structured but natural email with:
 
-Tone: warm, grounded, direct. Not consultancy language. Not cheerful. Like someone who has been doing this work for a long time and can see what is happening clearly. Use plain language. Short sentences. No bullet points.
+- Start: "Kia ora ${to_name}"
+- First paragraph: reflect the overall pattern (not step-by-step summary)
+- Second: name 2–3 areas of strength ("holding steady", "working well", "strong foundations")
+- Third: name 2–3 pressure points ("where strain is showing", "where attention is needed", "where drift may be forming")
+- Fourth: interpret what this means for leadership clarity under pressure
+- Fifth: briefly mention support (coaching, strategy sessions, workshops) as natural options, not a list
+- Final line: invite a 20-minute conversation framed as clarity under pressure
 
-Do NOT use the word "journey". Do NOT say "I hope this finds you well." Keep it under 350 words.`
-        }]
+STYLE RULES:
+- Warm, grounded, direct
+- Short paragraphs
+- No bullet points
+- No corporate language
+- No "journey"
+- No "hope you're well"
+- Keep under 350 words
+
+IMPORTANT ENDING:
+- End exactly with:
+Ngā mihi  
+Maren Frerichs  
+Founder & Principal | Aronga  
+Strategic partner for leaders under pressure  
++64 27 446 9032  
+aronga.nz  
+https://nz.linkedin.com/in/marenfrerichs  
+https://www.instagram.com/a.r.o.n.g.a/  
+https://www.facebook.com/people/Aronga/61584111041409/  
+https://wa.me/64274469032
+            `.trim()
+          }
+        ]
       })
     });
 
-    const aiData = await aiResponse.json();
-    emailBody = aiData?.content?.[0]?.text || "";
+    const aiText = await aiResponse.text();
+
+    console.log("ANTHROPIC RAW:", aiText);
+
+    const aiData = JSON.parse(aiText);
+
+    const content = aiData?.content;
+
+    emailBody =
+      Array.isArray(content)
+        ? content.find(c => c.type === "text")?.text || ""
+        : "";
+
   } catch (err) {
-    console.error("Anthropic error:", err.message);
-    emailBody = `Kia ora ${to_name},\n\nThank you for completing the Strategic Orientation Diagnostic. Your results are attached below.\n\nI'll be in touch to arrange our 20-minute conversation.\n\nMaren\n\naronga.nz`;
+    console.error("AI GENERATION FAILED:", err);
+
+    emailBody = `
+Kia ora ${to_name},
+
+Thanks for completing the Strategic Orientation Diagnostic.
+
+Your results are below:
+${score_summary}
+
+Ngā mihi  
+Maren Frerichs  
+Aronga
+    `.trim();
   }
 
-  // Step 2: Send via Resend
+  // =========================
+  // 2. SEND EMAIL (RESEND)
+  // =========================
   try {
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -71,16 +123,22 @@ Do NOT use the word "journey". Do NOT say "I hope this finds you well." Keep it 
         to: [to_email],
         bcc: ["maren@aronga.nz"],
         subject: "Your Strategic Orientation Diagnostic — Aronga",
-        text: `${emailBody}\n\n---\nScore summary:\n${score_summary}`,
+        text: emailBody
       }),
     });
 
     const data = await response.json();
+
     if (!response.ok) {
       console.error("Resend error:", JSON.stringify(data));
       return res.status(400).json({ error: "Email send failed", detail: data });
     }
-    return res.status(200).json({ success: true, emailBody });
+
+    return res.status(200).json({
+      success: true,
+      emailBody
+    });
+
   } catch (err) {
     console.error("Resend error:", err.message);
     return res.status(500).json({ error: err.message });
