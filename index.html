@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Strategic Orientation Diagnostic — Aronga</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Lato:ital,wght@0,300;0,400;0,700;1,300;1,400&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #f5f2ed; font-family: 'Lato', sans-serif; color: #1C1C1C; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    input:focus { border-color: #2B3C4E !important; outline: none; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState } = React;
+
+    const SEND_URL = "https://aronga-diagnostic.vercel.app/api/send-email";
+
+    const steps = [
+      {
+        id: "identity", number: 1, icon: "🔭", label: "Identity",
+        subtitle: "Context, Environment & Futures",
+        why: "You can't make good choices if you're working off last year's assumptions. This step checks how clearly you can see what's shifting around you — and what it means for your direction.",
+        color: "#7a9e9f",
+        parts: [
+          {
+            id: "context", label: "Part 1 · Context",
+            questions: [
+              { id: "i_c1", text: "Our organisational overview — values, mission, purpose, priorities — is clear and current.", definition: "This includes having a live, shared picture of your top goals, your core communities, your external pressures, and whose perspective might be missing from the room." },
+              { id: "i_c2", text: "The leadership team is working from the same picture of where we are right now.", definition: "Not just formally agreed — genuinely shared. The CE and the board chair would describe the situation the same way." }
+            ]
+          },
+          {
+            id: "environment", label: "Part 2 · Environment & Change",
+            questions: [
+              { id: "i_e1", text: "We have named the key shifts already underway — funding decisions made, regulation confirmed, demand patterns changed.", definition: "Shifts are changes that have already happened. They are not predictions — they are the new terrain you are already operating in." },
+              { id: "i_e2", text: "We are actively reading early signals — policy tone, partner instability, community sentiment — before they become pressures.", definition: "Signals are not yet confirmed shifts. They are early indicators that widen your field of view. Most organisations miss them until they become crises." },
+              { id: "i_e3", text: "We have named the enduring tensions that shape our choices regardless of what future arrives.", definition: "Enduring tensions are structural — growth vs quality, central vs local, innovation vs stability. They don't go away. They need to be consciously leaned through, not avoided." }
+            ]
+          },
+          {
+            id: "futures", label: "Part 3 · Futures",
+            questions: [
+              { id: "i_f1", text: "We have stress-tested our direction across multiple plausible futures — not just the one we hope for.", definition: "This means asking: what weakens under growth pressure? Under funding constraint? Under a shock event? Under system transformation? Each future reveals different fragilities." },
+              { id: "i_f2", text: "We know which assumptions look most fragile when tested against disruptive futures.", definition: "An assumption reversal asks: what if the opposite were true? If your strategy assumes stable funding, what happens when it isn't? Naming fragile assumptions is how you protect against them." }
+            ]
+          },
+          {
+            id: "summary1", label: "Part 4 · Summary & Priorities",
+            questions: [
+              { id: "i_s1", text: "We have identified the 3–5 shifts, signals or exposures that will most influence our strategic choices over the next 12–24 months.", definition: "Not everything matters equally. This is about ruthless selection — the few things that, if ignored, would most increase your risk." },
+              { id: "i_s2", text: "We know where we are most exposed — financially, in workforce, in governance, in partnerships.", definition: "Exposure is where you are stretched or vulnerable. Naming it honestly is the first step to doing something about it." }
+            ]
+          }
+        ]
+      },
+      {
+        id: "purpose", number: 2, icon: "🧱", label: "Purpose",
+        subtitle: "Intent, Anchors, Flex & Posture",
+        why: "Step 1 clarified the terrain. Step 2 decides what must hold across it. This step checks whether you have genuinely committed to a direction — not just described one.",
+        color: "#9b8ab4",
+        parts: [
+          {
+            id: "intent", label: "Part 1 · Higher Intent",
+            questions: [
+              { id: "p_i1", text: "We can articulate our higher intent in one clear sentence — the outcome we are responsible for protecting, even when pressure increases.", definition: "Higher intent is not a vision statement or a list of activities. It is the specific outcome you are accountable for — the thing that must hold even when everything else is under pressure. It answers: what are we ultimately here to protect or enable?" },
+              { id: "p_i2", text: "Our higher intent describes an outcome, not an activity — and would hold across disruptive futures.", definition: "A weak higher intent describes what you do. A strong one names what changes as a result. The test: would it still be your responsibility in a completely different operating environment?" }
+            ]
+          },
+          {
+            id: "anchors", label: "Part 2 · Anchors & Flex",
+            questions: [
+              { id: "p_a1", text: "We have named 3–5 things we will not compromise to protect our intent — our non-negotiables.", definition: "Anchors are the boundaries that must hold regardless of pressure. They reflect values, legal obligations, trust commitments, or responsibilities. If everything feels non-negotiable, you haven't prioritised. If nothing does, you haven't committed." },
+              { id: "p_a2", text: "We are clear on what can genuinely flex — delivery model, sequencing, partnerships, timeframes — without violating our higher intent.", definition: "Flex is the space where adaptation is allowed. Knowing what can change gives you room to move. Confusing flex with anchors is where strategic drift begins — when things that should be stable shift under pressure." }
+            ]
+          },
+          {
+            id: "posture", label: "Part 3 · Strategic Posture",
+            questions: [
+              { id: "p_p1", text: "We have chosen a deliberate strategic role — not just what we do, but the stance we are taking in response to the future we see.", definition: "Strategic posture is the role you choose to play: builder, convenor, standard-setter, connector. It's not your activities — it's the deliberate position you are taking in response to what's shifting around you." },
+              { id: "p_p2", text: "We have identified the capability we must grow to play our chosen role credibly.", definition: "If the capability column is vague, the strategy is not yet real. This question checks whether your posture is grounded in honest muscle-assessment, not just ambition." }
+            ]
+          },
+          {
+            id: "alignment2", label: "Part 4 · Alignment Check",
+            questions: [
+              { id: "p_al1", text: "Our higher intent, anchors, and posture are genuinely aligned with our values, mission, and purpose — not just formally consistent.", definition: "Formal alignment means the documents don't contradict each other. Genuine alignment means the strategy actually reflects what matters most — and would be recognised as consistent by the people you serve." }
+            ]
+          }
+        ]
+      },
+      {
+        id: "choices", number: 3, icon: "🎯", label: "Choices",
+        subtitle: "Priorities, Trade-offs & Risk",
+        why: "Step 2 clarified what must hold. Step 3 is where you choose what matters most — and what has to stop. This is the hardest step. It's also where strategy becomes real.",
+        color: "#b8935a",
+        parts: [
+          {
+            id: "priorities", label: "Part 1 · Strategic Priorities",
+            questions: [
+              { id: "c_p1", text: "We have identified 3–5 outcome-level priorities for the next 12–24 months — not a list of projects, but the results that must dominate.", definition: "Outcome-level priorities describe what changes as a result of your work — not the activities you'll do to get there. The distinction matters because it tells you when you're done — and what you'd sacrifice." },
+              { id: "c_p2", text: "Each priority clearly strengthens our higher intent, reflects our chosen role, or resolves a key tension.", definition: "If a priority doesn't connect to at least one of these three, it's probably not a strategic priority — it's something you've been doing that hasn't been examined." }
+            ]
+          },
+          {
+            id: "tradeoffs", label: "Part 2 · Trade-offs",
+            questions: [
+              { id: "c_t1", text: "We have named what will stop or reduce — not just what we will start or protect.", definition: "If the Stop column is empty, the trade-offs haven't been made. Real prioritisation always requires subtraction. The test: what are you doing today that contradicts your posture, or spreads capacity too thin?" },
+              { id: "c_t2", text: "We have chosen at least one enduring tension and made a deliberate decision about how we will lean through it.", definition: "Tensions don't resolve — they require a conscious lean. Growth vs quality. Central vs local. Innovation vs stability. Choosing a lean doesn't mean ignoring the other side. It means being clear about which way you'll move when the tension becomes acute." }
+            ]
+          },
+          {
+            id: "resource", label: "Part 3 · Resource & Risk",
+            questions: [
+              { id: "c_r1", text: "Resource lines are actually moving to match our priorities — budget, leadership attention, workforce allocation.", definition: "Strategy without resource movement is aspiration. If the money, attention, and people are still going to the same places, the priorities haven't changed regardless of what the documents say." },
+              { id: "c_r2", text: "We have named the risks we are consciously accepting — not just the ones we are trying to reduce.", definition: "Every strategic decision shifts risk. Good strategy reduces some risks deliberately and accepts others consciously. If you can't name what risk you're carrying, you probably haven't made a real choice." }
+            ]
+          },
+          {
+            id: "summary3", label: "Part 4 · Summary",
+            questions: [
+              { id: "c_s1", text: "The leadership team is genuinely clear — not just politely agreed — on priorities, stops, and the risk we are carrying.", definition: "Polite agreement looks like clarity but dissolves under pressure. Genuine clarity means someone could describe the priorities and trade-offs to a new board member without referencing a document." }
+            ]
+          }
+        ]
+      },
+      {
+        id: "capability", number: 4, icon: "✋", label: "Capability",
+        subtitle: "Operating Reality & Stakeholder Legitimacy",
+        why: "A strong direction is not enough. It must also be sustainable, supported, and trusted. This step checks whether what you've chosen is actually doable — and whether the right people will travel with it.",
+        color: "#8b9e7a",
+        parts: [
+          {
+            id: "cap_reality", label: "Part 1 · Capability Reality",
+            questions: [
+              { id: "ca_r1", text: "We are honest about where we are strong and where we are stretched — and this has influenced the posture we've chosen.", definition: "Capability includes financial resilience, leadership depth, governance clarity, operational systems, cultural alignment, and relational strength. If you haven't named where you're stretched, you haven't tested whether your strategy is sustainable." },
+              { id: "ca_r2", text: "We know what must be built before our chosen direction is sustainable — and we have accounted for that in our trade-offs.", definition: "Sustainability is often created through subtraction, not effort alone. If you need capability you don't have, something else needs to stop or reduce to create the space and resource to build it." }
+            ]
+          },
+          {
+            id: "workforce", label: "Part 2 · Workforce Implications",
+            questions: [
+              { id: "ca_w1", text: "We have the right people to carry this direction — not just goodwill and effort, but depth of capability in the right roles.", definition: "This is about structure and fit, not just motivation. Do your roles and teams reflect the posture you've chosen? A direction that requires new capability but doesn't change any roles or structures is unlikely to hold." }
+            ]
+          },
+          {
+            id: "stakeholders", label: "Part 3 · Stakeholder Legitimacy",
+            questions: [
+              { id: "ca_s1", text: "We know whose support is required for our direction to hold — funders, partners, communities, governance — and have a plan for engaging them.", definition: "Capability alone doesn't sustain direction. The people who enable, fund, govern, or are affected by your work need to recognise and trust the direction you're taking. Legitimacy is built through engagement, not announcement." },
+              { id: "ca_s2", text: "Te Tiriti responsibilities and Māori perspectives are actively shaping our direction — not just acknowledged.", definition: "This is about whether iwi voices, cultural obligations, and long-term wellbeing considerations are genuinely present in the strategic choices you're making — not just represented in a values statement." }
+            ]
+          },
+          {
+            id: "reset4", label: "Part 4 · Reset Check",
+            questions: [
+              { id: "ca_rc1", text: "If our current direction is not sustainable, we are willing to return and make further trade-offs — rather than pushing harder on a path that won't hold.", definition: "The reset check is a honesty test. Sometimes the right answer is to go back and stop something else. Sustainability is created through subtraction. If nothing can move, the direction isn't real." }
+            ]
+          }
+        ]
+      },
+      {
+        id: "rhythm", number: 5, icon: "↪️", label: "Rhythm",
+        subtitle: "Authority, Drift & Review",
+        why: "Strong strategy still needs a clear operating system. This step checks whether you have the governance rhythm and decision authority to keep strategy alive — and notice when it's drifting.",
+        color: "#a0826d",
+        parts: [
+          {
+            id: "authority", label: "Part 1 · Authority & Boundaries",
+            questions: [
+              { id: "r_a1", text: "It is clear who can decide what — between the board, the CE, and the executive team — without constant escalation.", definition: "Decision authority under pressure compresses fast. If it isn't clear before the pressure hits, decisions either stall or get made by whoever shouts loudest. This includes knowing what requires board involvement and what sits with management." },
+              { id: "r_a2", text: "We know how far leadership can move within flex areas before escalation is required.", definition: "Flex boundaries make the flex operational. They translate 'we can adapt our delivery model' into specific thresholds. Vague flex is a consistent source of governance tension." }
+            ]
+          },
+          {
+            id: "triggers", label: "Part 2 · Reset Triggers",
+            questions: [
+              { id: "r_t1", text: "We have pre-agreed what would trigger a strategic reset — not vague unease, but specific conditions.", definition: "Reset triggers transform commitment from permanent to conditional — which is what makes it honest. Examples: loss of a major funding stream, regulatory overhaul, significant workforce loss, reputational crisis. If triggers are vague, resets become political rather than principled." }
+            ]
+          },
+          {
+            id: "drift", label: "Part 3 · Drift & Assumptions",
+            questions: [
+              { id: "r_d1", text: "We are actively monitoring our most fragile assumptions — not waiting for them to fail.", definition: "Fragile assumptions are the ones your strategy most depends on but that could most plausibly prove wrong. Monitoring them means having a method and a frequency — not just a mental note." },
+              { id: "r_d2", text: "We have named where drift is most likely — and what the early warning signs would look like.", definition: "Drift rarely looks dramatic. It looks busy. Small reactive decisions accumulate. Naming drift risks in advance is how you notice them while they're still correctable." }
+            ]
+          },
+          {
+            id: "review", label: "Part 4 · Review Rhythm",
+            questions: [
+              { id: "r_r1", text: "We have a regular review cadence — quarterly disruption scans, assumption updates, annual orientation reset — linked to our governance rhythm.", definition: "If strategy is only reviewed in crisis, the review rhythm is broken. A regular cadence keeps the strategy alive. The cadence is realistic only if it connects to meetings that already exist." },
+              { id: "r_r2", text: "The board and executive team use the strategy to guide decisions between formal reviews — not just refer to it in planning cycles.", definition: "The real test of a living strategy is whether it changes day-to-day decisions. If the strategy exists in documents but not in conversations and trade-offs between reviews — it is not yet alive." }
+            ]
+          }
+        ]
+      }
+    ];
+
+    const scaleOptions = [
+      { value: 1, short: "Not at all" },
+      { value: 2, short: "Rarely" },
+      { value: 3, short: "Sometimes" },
+      { value: 4, short: "Mostly" },
+      { value: 5, short: "Consistently" },
+    ];
+
+    function avg(vals) {
+      if (!vals.length) return 0;
+      return vals.reduce((a, b) => a + b, 0) / vals.length;
+    }
+
+    function getStepScore(step, answers) {
+      const ids = step.parts.flatMap(p => p.questions.map(q => q.id));
+      return avg(ids.map(id => answers[id]).filter(v => v !== undefined));
+    }
+
+    function getPartScore(part, answers) {
+      return avg(part.questions.map(q => answers[q.id]).filter(v => v !== undefined));
+    }
+
+    function strengthLabel(score) {
+      if (score >= 4.5) return { label: "Strong", color: "#8b9e7a" };
+      if (score >= 3.5) return { label: "Mostly holding", color: "#7a9e9f" };
+      if (score >= 2.5) return { label: "Developing", color: "#b8935a" };
+      return { label: "Under pressure", color: "#a0826d" };
+    }
+
+    async function generateAndSend(name, email, answers) {
+      const scoreSummary = steps.map(step => {
+        const score = getStepScore(step, answers);
+        const parts = step.parts.map(part => {
+          const ps = getPartScore(part, answers);
+          return `    ${part.label}: ${ps.toFixed(1)}/5`;
+        }).join("\n");
+        return `${step.label} (${step.subtitle}): ${score.toFixed(1)}/5\n${parts}`;
+      }).join("\n\n");
+
+      const weakSteps = steps.filter(s => getStepScore(s, answers) < 3).map(s => s.label).join(", ");
+      const strongSteps = steps.filter(s => getStepScore(s, answers) >= 4).map(s => s.label).join(", ");
+
+      const aiResponse = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          messages: [{
+            role: "user",
+            content: `You are writing a warm, direct, personal email on behalf of Maren Frerichs from Aronga (aronga.nz) — a strategic advisor and leadership coach for senior leaders and boards in the not-for-profit sector in Aotearoa New Zealand.
+
+The recipient (${name}) has just completed Aronga's Strategic Orientation Diagnostic — a self-assessment mapping their organisation's readiness across five areas of the Strategy & Direction Sprint.
+
+Their scores:
+${scoreSummary}
+
+${strongSteps ? `Areas of strength: ${strongSteps}` : "No areas are strongly confident."}
+${weakSteps ? `Areas under most pressure: ${weakSteps}` : "No areas are acutely under pressure."}
+
+Write a personalised email that:
+1. Opens with "Kia ora ${name}" — not "Hi" or "Dear"
+2. Acknowledges what they've just reflected on — warmly and directly
+3. Names where they appear to be grounded/strong (if applicable) — use language like "what's holding well", "what's going steady"
+4. Names honestly where the pressure is showing — "where direction may be drifting", "where the work is", "what wants attention." Be honest but not alarming.
+5. Includes a short paragraph on the ways Aronga can help, introduced naturally — not as a list of products but as an offer of support. Mention these three options in plain language: one-on-one coaching for leaders working on their own strategic thinking; strategy sessions focused on a particular area they want to strengthen; facilitated workshops to build or reset strategy with their team.
+6. Closes with an invitation to the 20-minute conversation — framed as: this is where it gets interesting. Not a sales pitch.
+7. Signs off as Maren
+
+Tone: warm, grounded, direct. Not consultancy language. Not cheerful. Like someone who has been doing this work for a long time and can see what is happening clearly. Use plain language. Short sentences. No bullet points.
+
+Do NOT use the word "journey". Do NOT say "I hope this finds you well." Keep it under 350 words.`
+          }]
+        })
+      });
+
+      const aiData = await aiResponse.json();
+      const emailBody = aiData.content?.[0]?.text || "";
+
+      const sendResponse = await fetch(SEND_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to_name: name,
+          to_email: email,
+          message: emailBody,
+          score_summary: scoreSummary,
+        })
+      });
+
+      if (!sendResponse.ok) {
+        const errData = await sendResponse.json();
+        throw new Error(errData.error || "Email send failed");
+      }
+
+      return emailBody;
+    }
+
+    function Tooltip({ text }) {
+      const [show, setShow] = useState(false);
+      return (
+        <span style={{ position: "relative", display: "inline" }}>
+          <button onClick={() => setShow(!show)} style={{
+            background: "none", border: "1px solid rgba(43,60,78,0.25)", borderRadius: "50%",
+            cursor: "pointer", fontFamily: "'Montserrat', sans-serif", fontSize: 9,
+            color: "#2B3C4E", opacity: 0.5, padding: "0px 5px", marginLeft: 6,
+            lineHeight: "16px", verticalAlign: "middle",
+          }}>?</button>
+          {show && (
+            <span style={{
+              position: "absolute", left: 0, top: "calc(100% + 6px)", zIndex: 50,
+              background: "#2B3C4E", color: "#f5f2ed",
+              padding: "14px 16px", width: 280, maxWidth: "85vw",
+              fontFamily: "'Lato', sans-serif", fontSize: 13, lineHeight: 1.65,
+              boxShadow: "0 4px 24px rgba(0,0,0,0.2)", display: "block", fontStyle: "normal",
+            }}>
+              {text}
+              <button onClick={(e) => { e.stopPropagation(); setShow(false); }} style={{
+                display: "block", marginTop: 10, background: "none", border: "none",
+                color: "rgba(245,242,237,0.45)", fontFamily: "'Montserrat', sans-serif",
+                fontSize: 9, letterSpacing: "0.15em", cursor: "pointer", padding: 0,
+              }}>CLOSE</button>
+            </span>
+          )}
+        </span>
+      );
+    }
+
+    function QuestionRow({ q, answers, setAnswers, color }) {
+      return (
+        <div style={{
+          background: "#fff", border: "1px solid rgba(43,60,78,0.09)",
+          borderLeft: `3px solid ${answers[q.id] ? color : "rgba(43,60,78,0.12)"}`,
+          padding: "20px 24px", marginBottom: 12, transition: "border-color 0.2s",
+        }}>
+          <p style={{ fontFamily: "'Lato', sans-serif", fontSize: 15, lineHeight: 1.65, color: "#1C1C1C", marginBottom: 16 }}>
+            {q.text}
+            {q.definition && <Tooltip text={q.definition} />}
+          </p>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {scaleOptions.map(s => (
+              <button key={s.value} onClick={() => setAnswers(prev => ({ ...prev, [q.id]: s.value }))}
+                style={{
+                  flex: 1, minWidth: 72, padding: "10px 6px",
+                  background: answers[q.id] === s.value ? color : "transparent",
+                  border: `1px solid ${answers[q.id] === s.value ? color : "rgba(43,60,78,0.18)"}`,
+                  color: answers[q.id] === s.value ? "#fff" : "#555",
+                  fontFamily: "'Montserrat', sans-serif", fontSize: 9, letterSpacing: "0.08em",
+                  textTransform: "uppercase", cursor: "pointer", transition: "all 0.15s", textAlign: "center",
+                }}>{s.short}</button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    function ResultsView({ answers, onRestart }) {
+      const [name, setName] = useState("");
+      const [email, setEmail] = useState("");
+      const [sending, setSending] = useState(false);
+      const [sent, setSent] = useState(false);
+      const [emailPreview, setEmailPreview] = useState("");
+      const [error, setError] = useState("");
+
+      async function handleSend() {
+        if (!name.trim() || !email.trim()) return;
+        setSending(true);
+        setError("");
+        try {
+          const body = await generateAndSend(name, email, answers);
+          setEmailPreview(body);
+          setSent(true);
+        } catch(e) {
+          setError("Something went wrong: " + e.message + ". Please try again or contact maren@aronga.nz directly.");
+        }
+        setSending(false);
+      }
+
+      return (
+        <div style={{ maxWidth: 760, margin: "0 auto", padding: "72px 32px 80px", animation: "fadeUp 0.5s ease" }}>
+          <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 9, letterSpacing: "0.35em", color: "#2B3C4E", opacity: 0.45, marginBottom: 24, textTransform: "uppercase" }}>
+            Aronga · Strategic Orientation Diagnostic · Your Results
+          </div>
+          <h2 style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "clamp(22px, 3vw, 36px)", fontWeight: 300, color: "#1C1C1C", letterSpacing: "-0.02em", marginBottom: 10, lineHeight: 1.2 }}>
+            Where direction is<br /><em style={{ fontStyle: "italic", color: "#2B3C4E" }}>holding — and where it needs attention.</em>
+          </h2>
+          <p style={{ fontFamily: "'Lato', sans-serif", fontSize: 15, lineHeight: 1.7, color: "#666", marginBottom: 48 }}>
+            Your orientation profile across the five areas of the Strategic Orientation Sprint. Look for the pattern — where you're strong, and where pressure may be doing quiet damage.
+          </p>
+
+          {steps.map(step => {
+            const stepScore = getStepScore(step, answers);
+            const sl = strengthLabel(stepScore);
+            return (
+              <div key={step.id} style={{ marginBottom: 40 }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 10 }}>
+                  <span style={{ fontSize: 18 }}>{step.icon}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8 }}>
+                      <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 13, fontWeight: 500, color: "#1C1C1C" }}>
+                        Step {step.number} · {step.label}
+                      </span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 8, letterSpacing: "0.12em", color: sl.color, border: `1px solid ${sl.color}`, padding: "2px 8px", textTransform: "uppercase" }}>{sl.label}</span>
+                        <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 11, color: "#bbb" }}>{stepScore.toFixed(1)}/5</span>
+                      </div>
+                    </div>
+                    <p style={{ fontFamily: "'Lato', sans-serif", fontSize: 12, fontStyle: "italic", color: "#aaa", marginTop: 2 }}>{step.subtitle}</p>
+                  </div>
+                </div>
+                <div style={{ height: 5, background: "#ede9e2", marginBottom: 14 }}>
+                  <div style={{ height: "100%", width: `${(stepScore / 5) * 100}%`, background: step.color, transition: "width 1s ease" }} />
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gap: 8 }}>
+                  {step.parts.map(part => {
+                    const ps = getPartScore(part, answers);
+                    const psl = strengthLabel(ps);
+                    return (
+                      <div key={part.id} style={{ background: "#faf8f5", border: "1px solid rgba(43,60,78,0.07)", padding: "12px 14px", borderLeft: `3px solid ${psl.color}` }}>
+                        <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 9, letterSpacing: "0.12em", color: "#999", textTransform: "uppercase", marginBottom: 4 }}>
+                          {part.label.split("·")[1] ? part.label.split("·")[1].trim() : part.label}
+                        </div>
+                        <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 13, color: psl.color, fontWeight: 500 }}>{ps.toFixed(1)}/5</div>
+                        <div style={{ fontFamily: "'Lato', sans-serif", fontSize: 11, color: "#bbb", fontStyle: "italic" }}>{psl.label}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+
+          <div style={{ background: "#2B3C4E", padding: "32px 36px", marginTop: 48, marginBottom: 36 }}>
+            <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 9, letterSpacing: "0.3em", color: "rgba(245,242,237,0.4)", textTransform: "uppercase", marginBottom: 14 }}>What to bring to the conversation</div>
+            <p style={{ fontFamily: "'Lato', sans-serif", fontSize: 16, lineHeight: 1.75, color: "#f5f2ed" }}>
+              Notice which steps and parts landed hardest. Those are the ones worth naming. You don't need to have worked it out — that's what the 20 minutes is for. Bring the honest version of where things are, not the polished one.
+            </p>
+          </div>
+
+          <div style={{ background: "#f0ece6", padding: "36px", marginBottom: 40 }}>
+            <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 9, letterSpacing: "0.3em", color: "#2B3C4E", opacity: 0.55, textTransform: "uppercase", marginBottom: 20 }}>Your personal summary</div>
+            <p style={{ fontFamily: "'Lato', sans-serif", fontSize: 15, lineHeight: 1.65, color: "#444", marginBottom: 12 }}>
+              Your scores are a starting point. The pattern across them tells a more specific story — and that's what we'll send you.
+            </p>
+            <p style={{ fontFamily: "'Lato', sans-serif", fontSize: 15, lineHeight: 1.65, color: "#444", marginBottom: 12 }}>
+              Enter your name and email to get your personal summary. We'll also include a note on the ways Aronga can help, depending on where the pressure is:
+            </p>
+            <ul style={{ fontFamily: "'Lato', sans-serif", fontSize: 15, lineHeight: 1.75, color: "#444", marginBottom: 24, paddingLeft: 20 }}>
+              <li>One-on-one coaching for leaders working on their own strategic thinking</li>
+              <li>Strategy sessions focused on a particular area you want to strengthen</li>
+              <li>Facilitated workshops to build or reset strategy with your team</li>
+            </ul>
+            {!sent ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <input type="text" placeholder="Your name" value={name} onChange={e => setName(e.target.value)}
+                  style={{ padding: "12px 16px", border: "1px solid rgba(43,60,78,0.2)", fontFamily: "'Lato', sans-serif", fontSize: 15, color: "#1C1C1C", background: "#fff", width: "100%" }} />
+                <input type="email" placeholder="Your email address" value={email} onChange={e => setEmail(e.target.value)}
+                  style={{ padding: "12px 16px", border: "1px solid rgba(43,60,78,0.2)", fontFamily: "'Lato', sans-serif", fontSize: 15, color: "#1C1C1C", background: "#fff", width: "100%" }} />
+                <button onClick={handleSend} disabled={!name.trim() || !email.trim() || sending}
+                  style={{
+                    background: name.trim() && email.trim() && !sending ? "#2B3C4E" : "rgba(43,60,78,0.15)",
+                    border: "none", color: name.trim() && email.trim() && !sending ? "#f5f2ed" : "#aaa",
+                    padding: "14px 32px", fontFamily: "'Montserrat', sans-serif", fontSize: 10,
+                    letterSpacing: "0.25em", textTransform: "uppercase",
+                    cursor: name.trim() && email.trim() && !sending ? "pointer" : "default",
+                    alignSelf: "flex-start", transition: "all 0.2s",
+                  }}>{sending ? "Preparing your results..." : "Send my results →"}</button>
+                {error && <p style={{ fontFamily: "'Lato', sans-serif", fontSize: 13, color: "#a0826d", fontStyle: "italic" }}>{error}</p>}
+                <p style={{ fontFamily: "'Lato', sans-serif", fontSize: 12, color: "#bbb", fontStyle: "italic" }}>Your results are only shared with Maren at Aronga. They won't be used for anything else.</p>
+              </div>
+            ) : (
+              <div>
+                <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 11, letterSpacing: "0.15em", color: "#8b9e7a", textTransform: "uppercase", marginBottom: 12 }}>✓ Results sent to {email}</div>
+                <p style={{ fontFamily: "'Lato', sans-serif", fontSize: 15, lineHeight: 1.65, color: "#444", marginBottom: 24 }}>
+                  Check your inbox — your personal summary is on its way. Maren will be in touch to arrange your 20-minute conversation.
+                </p>
+                {emailPreview && (
+                  <div style={{ background: "#fff", border: "1px solid rgba(43,60,78,0.1)", padding: "28px 32px", borderLeft: "3px solid #8b9e7a" }}>
+                    <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 8, letterSpacing: "0.25em", color: "#8b9e7a", textTransform: "uppercase", marginBottom: 16 }}>Your personal summary</div>
+                    <div style={{ fontFamily: "'Lato', sans-serif", fontSize: 14, lineHeight: 1.8, color: "#333", whiteSpace: "pre-wrap" }}>{emailPreview}</div>
+                    <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid rgba(43,60,78,0.08)", fontFamily: "'Lato', sans-serif", fontSize: 12, fontStyle: "italic", color: "#aaa", lineHeight: 1.6 }}>
+                      This summary was generated by AI based on your responses. Maren will read it before your conversation and talk it through with you.
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
+            <a href="mailto:maren@aronga.nz" style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 10, letterSpacing: "0.2em", color: "#2B3C4E", textDecoration: "none", textTransform: "uppercase", borderBottom: "1px solid rgba(43,60,78,0.3)", paddingBottom: 2 }}>maren@aronga.nz</a>
+            <span style={{ color: "#ddd" }}>·</span>
+            <a href="https://aronga.nz" target="_blank" rel="noreferrer" style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 10, letterSpacing: "0.2em", color: "#2B3C4E", textDecoration: "none", textTransform: "uppercase", borderBottom: "1px solid rgba(43,60,78,0.3)", paddingBottom: 2 }}>aronga.nz</a>
+          </div>
+          <button onClick={onRestart} style={{ background: "none", border: "none", fontFamily: "'Lato', sans-serif", fontSize: 13, color: "#ccc", fontStyle: "italic", cursor: "pointer", marginTop: 24, padding: 0, display: "block" }}>Start again</button>
+        </div>
+      );
+    }
+
+    function ArongaDiagnostic() {
+      const [screen, setScreen] = useState("intro");
+      const [stepIndex, setStepIndex] = useState(0);
+      const [partIndex, setPartIndex] = useState(0);
+      const [answers, setAnswers] = useState({});
+
+      const currentStep = steps[stepIndex];
+      const currentPart = currentStep && currentStep.parts[partIndex];
+      const totalParts = steps.reduce((a, s) => a + s.parts.length, 0);
+      const completedParts = steps.slice(0, stepIndex).reduce((a, s) => a + s.parts.length, 0) + partIndex;
+      const allCurrentAnswered = currentPart && currentPart.questions.every(q => answers[q.id] !== undefined);
+      const isLastPart = stepIndex === steps.length - 1 && partIndex === (currentStep ? currentStep.parts.length - 1 : 0);
+
+      function handleNext() {
+        if (partIndex < currentStep.parts.length - 1) setPartIndex(p => p + 1);
+        else if (stepIndex < steps.length - 1) { setStepIndex(s => s + 1); setPartIndex(0); }
+        else setScreen("results");
+      }
+
+      function handleBack() {
+        if (partIndex > 0) setPartIndex(p => p - 1);
+        else if (stepIndex > 0) { setStepIndex(s => s - 1); setPartIndex(steps[stepIndex - 1].parts.length - 1); }
+      }
+
+      function handleRestart() { setScreen("intro"); setStepIndex(0); setPartIndex(0); setAnswers({}); }
+
+      return (
+        <div style={{ minHeight: "100vh", background: "#f5f2ed" }}>
+          {screen === "step" && (
+            <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: 3, background: "rgba(43,60,78,0.08)", zIndex: 200 }}>
+              <div style={{ height: "100%", width: `${(completedParts / totalParts) * 100}%`, background: currentStep && currentStep.color, transition: "width 0.4s ease" }} />
+            </div>
+          )}
+
+          {screen === "intro" && (
+            <div style={{ maxWidth: 640, margin: "0 auto", padding: "80px 32px 60px", animation: "fadeUp 0.5s ease" }}>
+              <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 9, letterSpacing: "0.4em", color: "#2B3C4E", opacity: 0.45, marginBottom: 28, textTransform: "uppercase" }}>Aronga · Strategic Orientation Diagnostic</div>
+              <h1 style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "clamp(26px, 4vw, 44px)", fontWeight: 300, lineHeight: 1.15, letterSpacing: "-0.02em", color: "#1C1C1C", marginBottom: 20 }}>
+                Where is your organisation's<br /><em style={{ fontStyle: "italic", color: "#2B3C4E" }}>direction under most pressure?</em>
+              </h1>
+              <p style={{ fontFamily: "'Lato', sans-serif", fontSize: 16, lineHeight: 1.75, color: "#555", marginBottom: 16 }}>
+                This diagnostic is based on the <a href="https://aronga.nz/capability-companion/strategy-direction-sprint" target="_blank" rel="noreferrer" style={{ color: "#2B3C4E", textDecoration: "underline" }}>Strategic Orientation Sprint</a> — a five-step system for organisations navigating sustained disruption. It maps your readiness across the same five areas, and takes about five minutes.
+              </p>
+              <p style={{ fontFamily: "'Lato', sans-serif", fontSize: 16, lineHeight: 1.75, color: "#555", marginBottom: 16 }}>
+                There are no right answers. Each question has a definition if you need it.
+              </p>
+              <p style={{ fontFamily: "'Lato', sans-serif", fontSize: 16, lineHeight: 1.75, color: "#555", marginBottom: 48 }}>
+                At the end, you'll see where your strengths are and where you need some additional focus.
+              </p>
+              <button onClick={() => setScreen("step")}
+                style={{ background: "#2B3C4E", color: "#f5f2ed", border: "none", padding: "16px 40px", fontFamily: "'Montserrat', sans-serif", fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase", cursor: "pointer" }}
+              >Begin</button>
+              <div style={{ marginTop: 48, paddingTop: 28, borderTop: "1px solid rgba(43,60,78,0.1)", fontFamily: "'Lato', sans-serif", fontSize: 13, color: "#bbb", fontStyle: "italic" }}>
+                5 steps · 20 parts · ~5 minutes
+              </div>
+            </div>
+          )}
+
+          {screen === "step" && currentStep && currentPart && (
+            <div style={{ maxWidth: 720, margin: "0 auto", padding: "72px 32px 60px", animation: "fadeUp 0.3s ease" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 6 }}>
+                <span style={{ fontSize: 22 }}>{currentStep.icon}</span>
+                <div>
+                  <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 9, letterSpacing: "0.3em", color: currentStep.color, textTransform: "uppercase", marginBottom: 3 }}>Step {currentStep.number} of {steps.length} · {currentStep.label}</div>
+                  <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: "clamp(18px, 2.5vw, 26px)", fontWeight: 400, color: "#1C1C1C" }}>{currentStep.subtitle}</div>
+                </div>
+              </div>
+              <p style={{ fontFamily: "'Lato', sans-serif", fontSize: 14, fontStyle: "italic", color: "#999", marginBottom: 32, paddingLeft: 36 }}>{currentStep.why}</p>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, paddingBottom: 12, borderBottom: "1px solid rgba(43,60,78,0.08)" }}>
+                <div style={{ width: 3, height: 18, background: currentStep.color, flexShrink: 0 }} />
+                <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 10, letterSpacing: "0.2em", color: "#999", textTransform: "uppercase" }}>{currentPart.label}</span>
+              </div>
+
+              {currentPart.questions.map(q => (
+                <QuestionRow key={q.id} q={q} answers={answers} setAnswers={setAnswers} color={currentStep.color} />
+              ))}
+
+              <div style={{ display: "flex", gap: 10, marginTop: 36, alignItems: "center" }}>
+                {(stepIndex > 0 || partIndex > 0) && (
+                  <button onClick={handleBack} style={{ background: "transparent", border: "1px solid rgba(43,60,78,0.18)", color: "#999", padding: "12px 20px", fontFamily: "'Montserrat', sans-serif", fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase", cursor: "pointer" }}>← Back</button>
+                )}
+                <button onClick={handleNext} disabled={!allCurrentAnswered}
+                  style={{ background: allCurrentAnswered ? currentStep.color : "rgba(43,60,78,0.1)", border: "none", color: allCurrentAnswered ? "#fff" : "#ccc", padding: "12px 28px", marginLeft: "auto", fontFamily: "'Montserrat', sans-serif", fontSize: 9, letterSpacing: "0.2em", textTransform: "uppercase", cursor: allCurrentAnswered ? "pointer" : "default", transition: "all 0.2s" }}>
+                  {isLastPart ? "See results →" : "Next →"}
+                </button>
+              </div>
+              {!allCurrentAnswered && <p style={{ fontFamily: "'Lato', sans-serif", fontSize: 12, color: "#ccc", fontStyle: "italic", marginTop: 10, textAlign: "right" }}>Answer all questions to continue</p>}
+
+              <div style={{ display: "flex", gap: 5, marginTop: 28, justifyContent: "center" }}>
+                {currentStep.parts.map((p, i) => (
+                  <div key={p.id} style={{ width: 6, height: 6, borderRadius: "50%", background: i <= partIndex ? currentStep.color : "rgba(43,60,78,0.15)", opacity: i === partIndex ? 1 : 0.4, transition: "all 0.2s" }} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {screen === "results" && <ResultsView answers={answers} onRestart={handleRestart} />}
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<ArongaDiagnostic />);
+  </script>
+</body>
+</html>
