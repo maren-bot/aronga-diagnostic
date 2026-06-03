@@ -1,12 +1,14 @@
 export default async function handler(req, res) {
   console.log("🔥 FUNCTION HIT");
 
+  // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== "POST")
+    return res.status(405).json({ error: "Method not allowed" });
 
   const { to_name, to_email, score_summary } = req.body;
 
@@ -17,7 +19,7 @@ export default async function handler(req, res) {
   let emailBody = "";
 
   // =========================
-  // 1. CLAUDE EMAIL GENERATION
+  // 1. CLAUDE GENERATION
   // =========================
   try {
     const aiResponse = await fetch("https://api.anthropic.com/v1/messages", {
@@ -34,32 +36,29 @@ export default async function handler(req, res) {
           {
             role: "user",
             content: `
-You are Maren Frerichs writing a strategic reflection email for a senior leader in Aotearoa New Zealand.
+You are Maren Frerichs writing a strategic reflection email.
 
-They have just completed the Aronga Strategic Orientation Diagnostic.
+Recipient: ${to_name}
 
-Their scores:
+Scores:
 ${score_summary}
 
-Write a structured but natural email with:
-
-- Start: "Kia ora ${to_name}"
-- First paragraph: overall pattern (not a summary)
-- Second: 2–3 strengths ("holding steady", "working well", "strong foundations")
-- Third: 2–3 pressure points ("strain showing", "attention needed", "drift forming")
-- Fourth: what this means for leadership under pressure
-- Fifth: mention support (coaching, strategy sessions, workshops) naturally
-- Final line: invite a 20-minute conversation framed as clarity under pressure
+Write:
+- Kia ora ${to_name} opening
+- pattern insight (not summary)
+- strengths (2–3)
+- pressure points (2–3)
+- meaning under leadership pressure
+- mention coaching / strategy sessions / workshops naturally
+- invite 20-minute clarity conversation
 
 STYLE:
-- Warm, grounded, direct
-- Short paragraphs
-- No bullet points
-- No corporate language
-- No clichés
-- No "journey"
-- No "hope you're well"
-- Under 350 words
+- warm, grounded, direct
+- no corporate tone
+- no clichés
+- no "journey"
+- no "hope you're well"
+- under 350 words
 
 END EXACTLY WITH:
 
@@ -80,33 +79,29 @@ https://wa.me/64274469032
     });
 
     const aiData = await aiResponse.json();
+
     console.log("ANTHROPIC RESPONSE:", JSON.stringify(aiData, null, 2));
 
     emailBody = aiData?.content?.[0]?.text || "";
 
-    if (!emailBody) {
-      throw new Error("Empty email body from Anthropic");
-    }
-
+    if (!emailBody) throw new Error("Empty AI response");
   } catch (err) {
     console.error("AI GENERATION FAILED:", err);
 
-    emailBody = `
-Kia ora ${to_name},
+    emailBody = `Kia ora ${to_name},
 
 Thanks for completing the Strategic Orientation Diagnostic.
 
-Your results are below:
+Your results:
 ${score_summary}
 
 Ngā mihi  
 Maren Frerichs  
-Aronga
-    `.trim();
+Aronga`;
   }
 
   // =========================
-  // 2. SEND EMAIL (RESEND)
+  // 2. SEND EMAIL TO CLIENT
   // =========================
   try {
     const response = await fetch("https://api.resend.com/emails", {
@@ -116,31 +111,55 @@ Aronga
         "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "Aronga <onboarding@resend.dev>", // safer default for debugging
+        from: "Aronga <maren@aronga.nz>",
         to: [to_email],
-        bcc: ["maren@aronga.nz"],
         subject: "Your Strategic Orientation Diagnostic — Aronga",
         text: emailBody,
       }),
     });
 
     const data = await response.json();
-    console.log("RESEND RESPONSE:", JSON.stringify(data, null, 2));
 
     if (!response.ok) {
-      return res.status(400).json({
-        error: "Email send failed",
-        detail: data,
-      });
+      console.error("Resend error:", data);
+      return res.status(400).json({ error: "Email send failed", detail: data });
     }
+
+    // =========================
+    // 3. INTERNAL COPY (ALWAYS)
+    // =========================
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+      },
+      body: JSON.stringify({
+        from: "Aronga <maren@aronga.nz>",
+        to: ["maren@aronga.nz"],
+        subject: `Diagnostic: ${to_name} (${to_email})`,
+        text: `
+NEW DIAGNOSTIC SUBMISSION
+
+Name: ${to_name}
+Email: ${to_email}
+
+----------------------
+
+${emailBody}
+        `.trim(),
+      }),
+    });
 
     return res.status(200).json({
       success: true,
       emailBody,
     });
-
   } catch (err) {
-    console.error("RESEND ERROR:", err);
-    return res.status(500).json({ error: err.message });
+    console.error("SEND ERROR:", err);
+
+    return res.status(500).json({
+      error: err.message,
+    });
   }
 }
