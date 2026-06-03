@@ -23,6 +23,11 @@ ${score_summary}`
 
   console.log("CLAUDE RESPONSE:", aiData);
 
+  if (!aiResponse.ok) {
+    console.log("Claude API error:", aiData);
+    throw new Error("Claude request failed");
+  }
+
   emailBody =
     aiData?.content?.[0]?.text ||
     "Thanks for completing the diagnostic. We’ll be in touch shortly.";
